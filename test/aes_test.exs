@@ -37,6 +37,11 @@ defmodule AesTest do
                |> JWE.block_decrypt(ciphertext)
                |> elem(0)
     end
+
+    test "Successfully encrypts a string when passed a jwk" do
+      {:ok, key} = AES.get_jwk(@key)
+      assert {:ok, ciphertext} = AES.encrypt_256(key, "hello")
+    end
   end
 
   describe "GCM 256 Decryption tests" do
@@ -69,6 +74,11 @@ defmodule AesTest do
 
     test "Decrypts the key correctly", %{ciphertext: ciphertext} do
       assert {:ok, "hello"} = AES.decrypt_256(@key, ciphertext)
+    end
+
+    test "Decrypts the key correctly when passed a jwk", %{ciphertext: ciphertext} do
+      {:ok, key} = AES.get_jwk(@key)
+      assert {:ok, "hello"} = AES.decrypt_256(key, ciphertext)
     end
   end
 end

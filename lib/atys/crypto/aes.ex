@@ -6,9 +6,8 @@ defmodule Atys.Crypto.AES do
   @jwe_256 JWE.from_binary(@jwe_256_binary)
   @jwe_256_signature Base.url_encode64(@jwe_256_binary, padding: false)
 
-  def encrypt_256(encoded_key, plaintext) do
-    with {:ok, jwk} <- get_jwk(encoded_key),
-         {:ok, cipher} <- block_encrypt_256(jwk, plaintext),
+  def encrypt_256(%JWK{} = jwk, plaintext) do
+    with {:ok, cipher} <- block_encrypt_256(jwk, plaintext),
          :ok <- validate_ciphertext_algorithm(cipher) do
       {:ok, cipher}
     else
@@ -17,9 +16,15 @@ defmodule Atys.Crypto.AES do
     end
   end
 
-  def decrypt_256(encoded_key, ciphertext) do
+  def encrypt_256(<<encoded_key::binary>>, plaintext) do
+    case get_jwk(encoded_key) do
+      {:ok, jwk} -> encrypt_256(jwk, plaintext)
+      error -> error
+    end
+  end
+
+  def decrypt_256(%JWK{} = jwk, ciphertext) do
     with :ok <- validate_ciphertext_algorithm(ciphertext),
-         {:ok, jwk} <- get_jwk(encoded_key),
          {:ok, plaintext} <- block_decrypt_256(jwk, ciphertext) do
       {:ok, plaintext}
     else
@@ -28,7 +33,14 @@ defmodule Atys.Crypto.AES do
     end
   end
 
-  defp get_jwk(encoded_key) do
+  def decrypt_256(<<encoded_key::binary>>, ciphertext) do
+    case get_jwk(encoded_key) do
+      {:ok, jwk} -> decrypt_256(jwk, ciphertext)
+      error -> error
+    end
+  end
+
+  def get_jwk(encoded_key) do
     with {:ok, key} <- Atys.Crypto.decode_key(encoded_key),
          :ok <- validate_key(key) do
       {:ok, JWK.from_oct(key)}
