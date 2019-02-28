@@ -1,4 +1,4 @@
-defmodule Atys.StaticServer do
+defmodule Atys.StaticKeyStore do
   alias Atys.Crypto.AES
   use GenServer
 

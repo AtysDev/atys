@@ -22,7 +22,8 @@ defmodule Atys.MixProject do
   defp deps do
     [
       {:jason, "~> 1.1"},
-      {:jose, "~> 1.9"}
+      {:jose, "~> 1.9"},
+      {:plug_cowboy, "~> 2.0"}
     ]
   end
 end
