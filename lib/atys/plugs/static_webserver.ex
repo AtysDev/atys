@@ -1,9 +1,8 @@
 defmodule Atys.Plugs.StaticWebserver do
   alias Plug.Conn
-  alias Atys.StaticKeyStore
 
   def init(options) do
-    Keyword.fetch!(options, :server_name)
+    {_module, _context} = Keyword.fetch!(options, :cryptographer)
     options
   end
 
@@ -18,7 +17,7 @@ defmodule Atys.Plugs.StaticWebserver do
   defp handle(action, conn, opts) do
     with conn <- Conn.fetch_query_params(conn),
          {:ok, value} <- get_value(conn),
-         {:ok, response} <- get_response(action, opts[:server_name], value) do
+         {:ok, response} <- get_response(action, opts[:cryptographer], value) do
       Conn.send_resp(conn, 200, response)
     else
       error -> send_error(conn, opts, error)
@@ -41,6 +40,11 @@ defmodule Atys.Plugs.StaticWebserver do
   defp get_value(%{query_params: %{"v" => value}}), do: {:ok, value}
   defp get_value(_conn), do: {:error, :missing_value}
 
-  defp get_response(:encrypt, pid, plaintext), do: StaticKeyStore.encrypt(pid, plaintext)
-  defp get_response(:decrypt, pid, ciphertext), do: StaticKeyStore.decrypt(pid, ciphertext)
+  defp get_response(:encrypt, {cryptographer_module, context}, plaintext) do
+    cryptographer_module.encrypt_256(context, plaintext)
+  end
+
+  defp get_response(:decrypt, {cryptographer_module, context}, ciphertext) do
+    cryptographer_module.decrypt_256(context, ciphertext)
+  end
 end

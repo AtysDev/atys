@@ -3,74 +3,81 @@ defmodule StaticWebserverTest do
   use ExUnit.Case, async: true
   use Plug.Test
 
-  setup do
-    key = Base.url_encode64(<<1::256>>)
-    {:ok, pid} = start_supervised({Atys.StaticKeyStore, key})
-    opts = StaticWebserver.init(server_name: pid)
+  defmodule DummyCryptographer do
+    alias Atys.Behaviours.StaticCryptographer
+    @behaviour StaticCryptographer
 
-    %{
-      key: key,
-      store_pid: pid,
-      opts: opts
-    }
+    @impl StaticCryptographer
+    def encrypt_256(_context, plaintext) do
+      {:ok, "aoeu" <> plaintext}
+    end
+
+    @impl StaticCryptographer
+    def decrypt_256(_context, "asdf" <> _ciphertext) do
+      {:error, :invalid_decryption_key}
+    end
+
+    @impl StaticCryptographer
+    def decrypt_256(_context, "aoeu" <> plaintext) do
+      {:ok, plaintext}
+    end
   end
 
-  test "returns 404", context do
+  @opts [cryptographer: {DummyCryptographer, nil}]
+
+  test "returns 404" do
     conn =
       conn(:get, "/missing")
-      |> StaticWebserver.call(context[:opts])
+      |> StaticWebserver.call(@opts)
 
     assert conn.state == :sent
     assert conn.status == 404
   end
 
-  test "404 when the method is POST", context do
+  test "404 when the method is POST" do
     conn =
       conn(:post, "/encrypt")
-      |> StaticWebserver.call(context[:opts])
+      |> StaticWebserver.call(@opts)
 
     assert conn.state == :sent
     assert conn.status == 404
   end
 
-  test "encrypt returns 400 when the param is missing", context do
+  test "encrypt returns 400 when the param is missing" do
     conn =
       conn(:get, "/encrypt")
-      |> StaticWebserver.call(context[:opts])
+      |> StaticWebserver.call(@opts)
 
     assert conn.state == :sent
     assert conn.status == 400
   end
 
-  test "encrypt returns 200 when passed a value", context do
+  test "encrypt returns 200 when passed a value" do
     conn =
       conn(:get, "/encrypt?v=hello%20world")
-      |> StaticWebserver.call(context[:opts])
+      |> StaticWebserver.call(@opts)
 
     assert conn.state == :sent
     assert conn.status == 200
+    assert conn.resp_body == "aoeuhello world"
   end
 
-  test "decrypt returns 200", context do
-    encrypted =
-      "eyJhbGciOiJkaXIiLCJlbmMiOiJBMjU2R0NNIn0..q2xdybd8ywZvUcbg.aeAn6qB_pnV6A0A.MSC4_MSRysYismaIp-1ZhQ"
+  test "decrypt returns 200" do
+    encrypted = "aoeuhello world"
 
     conn =
       conn(:get, "/decrypt?v=#{encrypted}")
-      |> StaticWebserver.call(context[:opts])
+      |> StaticWebserver.call(@opts)
 
     assert conn.state == :sent
     assert conn.status == 200
     assert conn.resp_body == "hello world"
   end
 
-  test "decrypt returns 500 when the wrong key is used", context do
-    encrypted =
-      "eyJhbGciOiJkaXIiLCJlbmMiOiJBMjU2R0NNIn0..h32S2S4kD94ArdLJ.EQcICaat4-YteT8.WASSyJw1A84djA5QkXwyRw"
-
+  test "decrypt returns 400 when the wrong key is used" do
     conn =
-      conn(:get, "/decrypt?v=#{encrypted}")
-      |> StaticWebserver.call(context[:opts])
+      conn(:get, "/decrypt?v=asdfbad key")
+      |> StaticWebserver.call(@opts)
 
     assert conn.state == :sent
     assert conn.status == 400

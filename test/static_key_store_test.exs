@@ -15,12 +15,12 @@ defmodule StaticKeyStoreTest do
 
   test "Encrypt a value" do
     {:ok, pid} = start_supervised({StaticKeyStore, @key})
-    assert {:ok, ciphertext} = StaticKeyStore.encrypt(pid, "hello")
+    assert {:ok, ciphertext} = StaticKeyStore.encrypt_256(pid, "hello")
   end
 
   test "Decrypts a value" do
     {:ok, ciphertext} = Atys.Crypto.AES.encrypt_256(@key, "hello")
     {:ok, pid} = start_supervised({StaticKeyStore, @key})
-    assert {:ok, "hello"} = StaticKeyStore.decrypt(pid, ciphertext)
+    assert {:ok, "hello"} = StaticKeyStore.decrypt_256(pid, ciphertext)
   end
 end

@@ -1,16 +1,20 @@
 defmodule Atys.StaticKeyStore do
   alias Atys.Crypto.AES
+  alias Atys.Behaviours.StaticCryptographer
   use GenServer
+  @behaviour StaticCryptographer
 
   def start_link(encryption_key, opts \\ []) do
     GenServer.start_link(__MODULE__, encryption_key, opts)
   end
 
-  def encrypt(pid, plaintext) do
+  @impl StaticCryptographer
+  def encrypt_256(pid, plaintext) do
     GenServer.call(pid, {:encrypt, plaintext})
   end
 
-  def decrypt(pid, ciphertext) do
+  @impl StaticCryptographer
+  def decrypt_256(pid, ciphertext) do
     GenServer.call(pid, {:decrypt, ciphertext})
   end
 
