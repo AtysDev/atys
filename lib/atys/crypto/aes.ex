@@ -6,7 +6,7 @@ defmodule Atys.Crypto.AES do
   @jwe_256 JWE.from_binary(@jwe_256_binary)
   @jwe_256_signature Base.url_encode64(@jwe_256_binary, padding: false)
 
-  def encrypt_256(%JWK{} = jwk, plaintext) do
+  def encrypt_256(%JWK{} = jwk, plaintext) when is_binary(plaintext) do
     with {:ok, cipher} <- block_encrypt_256(jwk, plaintext),
          :ok <- validate_ciphertext_algorithm(cipher) do
       {:ok, cipher}
@@ -23,7 +23,7 @@ defmodule Atys.Crypto.AES do
     end
   end
 
-  def decrypt_256(%JWK{} = jwk, ciphertext) do
+  def decrypt_256(%JWK{} = jwk, ciphertext) when is_binary(ciphertext) do
     with :ok <- validate_ciphertext_algorithm(ciphertext),
          {:ok, plaintext} <- block_decrypt_256(jwk, ciphertext) do
       {:ok, plaintext}
