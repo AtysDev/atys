@@ -41,6 +41,7 @@ defmodule Atys.Plugs.StaticWebserver do
   defp get_value(_conn), do: {:error, :missing_value}
 
   defp get_response(:encrypt, {cryptographer_module, context}, plaintext) do
+    # to_encrypt = %Message
     cryptographer_module.encrypt_256(context, plaintext)
   end
 
