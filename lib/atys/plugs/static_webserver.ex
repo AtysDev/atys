@@ -2,9 +2,8 @@ defmodule Atys.Plugs.StaticWebserver do
   alias Plug.Conn
   alias Atys.Crypto.Message
 
-  def init(options) do
-    {_module, _context} = Keyword.fetch!(options, :cryptographer)
-    options
+  def init(cryptographer: {module, context}) do
+    [cryptographer: {module, context}]
   end
 
   def call(%Conn{path_info: ["encrypt"], method: "GET"} = conn, opts),
