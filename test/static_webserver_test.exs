@@ -1,5 +1,6 @@
 defmodule StaticWebserverTest do
   alias Atys.Plugs.StaticWebserver
+  alias Atys.Crypto.Message
   use ExUnit.Case, async: true
   use Plug.Test
 
@@ -59,11 +60,11 @@ defmodule StaticWebserverTest do
 
     assert conn.state == :sent
     assert conn.status == 200
-    assert conn.resp_body == "aoeuhello world"
+    assert conn.resp_body == "aoeu{\"m\":0,\"p\":\"hello world\",\"v\":1}"
   end
 
   test "decrypt returns 200" do
-    encrypted = "aoeuhello world"
+    encrypted = "aoeu" <> Message.serialize!(%Message{plaintext: "hello world"})
 
     conn =
       conn(:get, "/decrypt?v=#{encrypted}")
@@ -72,6 +73,17 @@ defmodule StaticWebserverTest do
     assert conn.state == :sent
     assert conn.status == 200
     assert conn.resp_body == "hello world"
+  end
+
+  test "decrypt returns 400 when the content blob is not a message" do
+    encrypted = "aoeuhelloworld"
+
+    conn =
+      conn(:get, "/decrypt?v=#{encrypted}")
+      |> StaticWebserver.call(@opts)
+
+    assert conn.state == :sent
+    assert conn.status == 400
   end
 
   test "decrypt returns 400 when the wrong key is used" do

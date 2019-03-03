@@ -1,5 +1,6 @@
 defmodule Atys.Plugs.StaticWebserver do
   alias Plug.Conn
+  alias Atys.Crypto.Message
 
   def init(options) do
     {_module, _context} = Keyword.fetch!(options, :cryptographer)
@@ -30,6 +31,9 @@ defmodule Atys.Plugs.StaticWebserver do
   defp send_error(conn, _opts, {:error, :invalid_decryption_key}),
     do: Conn.send_resp(conn, 400, "Cannot decrypt, wrong encryption key")
 
+  defp send_error(conn, _opts, {:error, :invalid_message_json}),
+    do: Conn.send_resp(conn, 400, "Cannot decrypt, json format is invalid")
+
   defp send_error(conn, opts, {:error, reason}) do
     case Keyword.fetch(opts, :verbose) do
       {:ok, true} -> Conn.send_resp(conn, 500, "[VERBOSE] Failed with error #{reason}")
@@ -41,11 +45,21 @@ defmodule Atys.Plugs.StaticWebserver do
   defp get_value(_conn), do: {:error, :missing_value}
 
   defp get_response(:encrypt, {cryptographer_module, context}, plaintext) do
-    # to_encrypt = %Message
-    cryptographer_module.encrypt_256(context, plaintext)
+    with message <- %Message{plaintext: plaintext},
+         {:ok, serialized} <- Message.serialize(message),
+         {:ok, ciphertext} <- cryptographer_module.encrypt_256(context, serialized) do
+      {:ok, ciphertext}
+    else
+      {:error, error} -> {:error, error}
+    end
   end
 
   defp get_response(:decrypt, {cryptographer_module, context}, ciphertext) do
-    cryptographer_module.decrypt_256(context, ciphertext)
+    with {:ok, serialized} <- cryptographer_module.decrypt_256(context, ciphertext),
+         {:ok, message} <- Message.deserialize(serialized) do
+      {:ok, message.plaintext}
+    else
+      {:error, error} -> {:error, error}
+    end
   end
 end
