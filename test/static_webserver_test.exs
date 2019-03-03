@@ -35,6 +35,15 @@ defmodule StaticWebserverTest do
     assert conn.status == 404
   end
 
+  test "400 when trying to encrypt something larger than the max # of bytes" do
+    assert_raise(Plug.Conn.InvalidQueryError, fn ->
+      text = String.duplicate("a", 11_000)
+
+      conn(:get, "/encrypt?v=#{text}")
+      |> StaticWebserver.call(@opts)
+    end)
+  end
+
   test "404 when the method is POST" do
     conn =
       conn(:post, "/encrypt")

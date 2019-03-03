@@ -16,7 +16,7 @@ defmodule Atys.Plugs.StaticWebserver do
   def call(conn, _opts), do: Conn.send_resp(conn, 404, "Unknown resource")
 
   defp handle(action, conn, opts) do
-    with conn <- Conn.fetch_query_params(conn),
+    with conn <- Conn.fetch_query_params(conn, length: 10_000),
          {:ok, value} <- get_value(conn),
          {:ok, response} <- get_response(action, opts[:cryptographer], value) do
       Conn.send_resp(conn, 200, response)
