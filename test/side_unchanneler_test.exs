@@ -96,25 +96,6 @@ defmodule Atys.SideUnchannelerTest do
     )
   end
 
-  test "throws if attempt to set up a side unchanneler after a send_resp" do
-    defmodule AlreadySentPipeline do
-      alias Atys.Plugs.SideUnchanneler
-      use Plug.Builder
-
-      plug(Sleepy, 2)
-      plug(SideUnchanneler, send_after_ms: 5)
-      plug(SideUnchanneler, execute: true)
-    end
-
-    assert_raise(
-      RuntimeError,
-      "Tried to initialize a side unchanneler after data has already been sent",
-      fn ->
-        AlreadySentPipeline.call(conn(:get, "/"), [])
-      end
-    )
-  end
-
   test "throws if send_resp is used" do
     defmodule BadSendResponse do
       alias Atys.Plugs.SideUnchanneler
@@ -143,5 +124,24 @@ defmodule Atys.SideUnchannelerTest do
 
     conn = NoSendResponse.call(conn(:get, "/"), [])
     assert conn.state == :unset
+  end
+
+  test "does nothing if invoked later in the pipeline" do
+    defmodule RunTwice do
+      alias Atys.Plugs.SideUnchanneler
+      use Plug.Builder
+
+      plug(SideUnchanneler, send_after_ms: 5)
+      plug(Sleepy, 2)
+      plug(SideUnchanneler, execute: true)
+      plug(SideUnchanneler, send_after_ms: 5)
+      plug(SideUnchanneler, execute: true)
+      plug(SideUnchanneler, send_after_ms: 5)
+      plug(SideUnchanneler, execute: true)
+    end
+    conn  = RunTwice.call(conn(:get, "/"), [])
+    assert conn.state == :sent
+    assert conn.status == 200
+    assert conn.resp_body == "hello world"
   end
 end

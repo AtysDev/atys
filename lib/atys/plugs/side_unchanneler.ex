@@ -12,8 +12,8 @@ defmodule Atys.Plugs.SideUnchanneler do
     raise "Tried to initialize a side unchanneler timer when one already exists"
   end
 
-  def call(%Conn{state: state}, send_after_ms: _ms) when state != :unset do
-    raise "Tried to initialize a side unchanneler after data has already been sent"
+  def call(%Conn{state: state} = conn, send_after_ms: _ms) when state != :unset do
+    Conn.put_private(conn, :side_unchanneler_send_at, :already_sent)
   end
 
   def call(%Conn{} = conn, send_after_ms: send_after_ms) do
@@ -21,6 +21,10 @@ defmodule Atys.Plugs.SideUnchanneler do
 
     Conn.register_before_send(conn, &before_send_callback/1)
     |> Conn.put_private(:side_unchanneler_send_at, send_at)
+  end
+
+  def call(%Conn{private: %{side_unchanneler_send_at: :already_sent}} = conn, execute: true, callback: _callback) do
+    clear_state(conn)
   end
 
   def call(%Conn{private: %{side_unchanneler_send_at: send_at}} = conn, execute: true, callback: callback) do
