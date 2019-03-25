@@ -8,7 +8,7 @@ defmodule Atys.Plugs.SideUnchanneler do
 
   def init([execute: true, callback: _callback] = opts), do: opts
 
-  def call(%Conn{private: %{side_unchanneler_timer: _timer}}, send_after_ms: _ms) do
+  def call(%Conn{private: %{side_unchanneler_send_at: _timer}}, send_after_ms: _ms) do
     raise "Tried to initialize a side unchanneler timer when one already exists"
   end
 
@@ -17,34 +17,22 @@ defmodule Atys.Plugs.SideUnchanneler do
   end
 
   def call(%Conn{} = conn, send_after_ms: send_after_ms) do
-    timer = Process.send_after(self(), :side_channeler_delay, send_after_ms)
+    send_at = now() + send_after_ms
 
     Conn.register_before_send(conn, &before_send_callback/1)
-    |> Conn.put_private(:side_unchanneler_timer, timer)
+    |> Conn.put_private(:side_unchanneler_send_at, send_at)
   end
 
-  def call(%Conn{status: nil} = conn, execute: true, callback: _callback), do: conn
-
-  def call(%Conn{private: %{side_unchanneler_timer: timer}} = conn,
-        execute: true,
-        callback: callback
-      )
-      when timer != nil do
-    case Process.read_timer(timer) do
-      false ->
-        clear_state(conn) |> callback.()
-
-      _ ->
-        wait_and_execute(conn)
-    end
+  def call(%Conn{private: %{side_unchanneler_send_at: send_at}} = conn, execute: true, callback: callback) do
+    clear_state(conn)
+    |> delay_and_execute(%{delay: send_at - now(), callback: callback})
   end
 
   def call(%Conn{}, execute: true) do
     raise "Trying to verify the side_unchanneler timer, but send_after has not been initialized"
   end
 
-  def before_send_callback(%Conn{private: %{side_unchanneler_timer: timer}})
-      when timer != nil do
+  def before_send_callback(%Conn{private: %{side_unchanneler_send_at: _send_at}}) do
     raise "Called send_resp in a pipeline wrapped by side_unchanneler"
   end
 
@@ -58,18 +46,19 @@ defmodule Atys.Plugs.SideUnchanneler do
     )
   end
 
-  defp wait_and_execute(%Conn{} = conn) do
-    conn = clear_state(conn)
+  defp delay_and_execute(%Conn{state: :set} = conn, %{delay: delay}) when delay > 0 do
+    # Cowboy spins up its own process per-request
+    # and therefore it's okay to block the whole process for a response
+    Process.sleep(delay)
+    Conn.send_resp(conn)
+  end
+  defp delay_and_execute(%Conn{state: :set} = conn, %{callback: callback}), do: callback.(conn)
+  defp delay_and_execute(conn, _), do: conn
 
-    receive do
-      :side_channeler_delay ->
-        Conn.send_resp(conn)
-    after
-      30_000 -> Conn.send_resp(conn, 500, "Unexpected side_unchanneler timeout")
-    end
+  defp clear_state(%Conn{} = conn) do
+    pop_in(conn, [Access.key!(:private), Access.key(:side_unchanneler_send_at)])
+    |> elem(1)
   end
 
-  defp clear_state(conn) do
-    Conn.put_private(conn, :side_unchanneler_timer, nil)
-  end
+  defp now(), do: System.monotonic_time(:millisecond)
 end
