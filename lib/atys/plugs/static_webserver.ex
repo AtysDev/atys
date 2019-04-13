@@ -44,7 +44,7 @@ defmodule Atys.Plugs.StaticWebserver do
   defp get_value(_conn), do: {:error, :missing_value}
 
   defp get_response(:encrypt, {cryptographer_module, context}, plaintext) do
-    with message <- %Message{plaintext: plaintext},
+    with message <- %Message{plaintext: plaintext, project_id: 1},
          {:ok, serialized} <- Message.serialize(message),
          {:ok, ciphertext} <- cryptographer_module.encrypt_256(context, serialized) do
       {:ok, ciphertext}

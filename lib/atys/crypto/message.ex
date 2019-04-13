@@ -1,6 +1,7 @@
 defmodule Atys.Crypto.Message do
   @fields %{
     plaintext: {"p", nil},
+    project_id: {"j", nil},
     version: {"v", 1},
     mode: {"m", 0},
     id: {"i", nil},
@@ -10,6 +11,7 @@ defmodule Atys.Crypto.Message do
   @struct_definition Enum.map(@fields, fn {k, {_shorthand, default}} -> {k, default} end)
   @shorthand_keys Enum.map(@fields, fn {_k, {shorthand, _default}} -> shorthand end)
 
+  @enforce_keys [:plaintext, :project_id]
   defstruct @struct_definition
 
   def serialize(%Atys.Crypto.Message{} = data) do

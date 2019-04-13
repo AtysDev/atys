@@ -74,7 +74,7 @@ defmodule StaticWebserverTest do
   end
 
   test "decrypt returns 200" do
-    encrypted = "aoeu" <> Message.serialize!(%Message{plaintext: "hello world"})
+    encrypted = "aoeu" <> Message.serialize!(%Message{plaintext: "hello world", project_id: 1})
 
     conn =
       conn(:get, "/decrypt?v=#{encrypted}")
