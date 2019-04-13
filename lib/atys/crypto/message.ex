@@ -2,7 +2,10 @@ defmodule Atys.Crypto.Message do
   @fields %{
     plaintext: {"p", nil},
     version: {"v", 1},
-    mode: {"m", 0}
+    mode: {"m", 0},
+    id: {"i", nil},
+    parity: {"x", nil},
+    csv: {"c", nil}
   }
   @struct_definition Enum.map(@fields, fn {k, {_shorthand, default}} -> {k, default} end)
   @shorthand_keys Enum.map(@fields, fn {_k, {shorthand, _default}} -> shorthand end)

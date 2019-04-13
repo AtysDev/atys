@@ -69,7 +69,8 @@ defmodule StaticWebserverTest do
 
     assert conn.state == :sent
     assert conn.status == 200
-    assert conn.resp_body == "aoeu{\"m\":0,\"p\":\"hello world\",\"v\":1}"
+    assert "aoeu"<> body = conn.resp_body
+    assert %{"p" => "hello world"} = Jason.decode!(body)
   end
 
   test "decrypt returns 200" do

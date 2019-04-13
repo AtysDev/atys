@@ -3,11 +3,11 @@ defmodule Atys.MessageTest do
   use ExUnit.Case, async: true
 
   test "serializes a Message struct" do
-    assert {:ok, "{\"m\":0,\"p\":null,\"v\":1}"} == Message.serialize(%Message{})
+    assert {:ok, "{\"c\":null,\"i\":null,\"m\":0,\"p\":null,\"v\":1,\"x\":null}"} == Message.serialize(%Message{})
   end
 
   test "serializes a Message struct with a mode and cipher" do
-    assert {:ok, "{\"m\":22,\"p\":\"hello\",\"v\":1}"} ==
+    assert {:ok, "{\"c\":null,\"i\":null,\"m\":22,\"p\":\"hello\",\"v\":1,\"x\":null}"} ==
              Message.serialize(%Message{plaintext: "hello", mode: 22})
   end
 
